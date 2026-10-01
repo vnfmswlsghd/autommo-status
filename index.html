@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.github.com; img-src data:; base-uri 'none'; form-action 'none'">
+</head>
+<body>
+<title>AutoMMO Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --sunk: #eef0f4; --line: #e1e4ea; --line-strong: #cdd2db;
+  --fg: #161a22; --fg-2: #4a5263; --fg-3: #7a8395; --accent: #3557d4; --accent-soft: #e8edfc;
+  --ok: #1f9d55; --ok-soft: #e3f4ea; --slow: #b7791f; --slow-soft: #fbf0dc;
+  --part: #d9631e; --part-soft: #fce9dd; --down: #d03b3b; --down-soft: #fbe3e3; --none: #d5d9e1;
+  --chart: #3987e5; --shadow: 0 1px 2px rgba(22, 26, 34, .05), 0 4px 16px rgba(22, 26, 34, .04);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1218; --surface: #171b23; --sunk: #1d222c; --line: #262c38; --line-strong: #343c4b;
+  --fg: #e8ebf1; --fg-2: #aab2c2; --fg-3: #7c8597; --accent: #8aa4ff; --accent-soft: #1e2744;
+  --ok: #3cc47a; --ok-soft: #15291f; --slow: #e0a646; --slow-soft: #2d2414;
+  --part: #f08a4b; --part-soft: #2f1d12; --down: #f06a6a; --down-soft: #331818; --none: #2c3340;
+  --chart: #6aa8f0; --shadow: none; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1218; --surface: #171b23; --sunk: #1d222c; --line: #262c38; --line-strong: #343c4b;
+  --fg: #e8ebf1; --fg-2: #aab2c2; --fg-3: #7c8597; --accent: #8aa4ff; --accent-soft: #1e2744;
+  --ok: #3cc47a; --ok-soft: #15291f; --slow: #e0a646; --slow-soft: #2d2414;
+  --part: #f08a4b; --part-soft: #2f1d12; --down: #f06a6a; --down-soft: #331818; --none: #2c3340;
+  --chart: #6aa8f0; --shadow: none; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.55 "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased }
+.wrap { max-width: 880px; margin: 0 auto; padding: 28px 16px 56px }
+.mono, .num { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-variant-numeric: tabular-nums }
+a { color: inherit }
+button { font: inherit; color: inherit }
+
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: -.01em }
+.brand svg { flex: none }
+.brand small { font-weight: 500; color: var(--fg-3); font-size: 13px; letter-spacing: 0 }
+.meta { color: var(--fg-3); font-size: 13px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+  background: var(--sunk); color: var(--fg-2); font-size: 12px; font-weight: 500 }
+.chip.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
+  box-shadow: 0 0 0 3px var(--ok-soft) }
+.chip.snap::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--fg-3) }
+.icon-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 4px 10px;
+  font-size: 12px; cursor: pointer; color: var(--fg-2) }
+.icon-btn:hover { border-color: var(--line-strong); color: var(--fg) }
+
+.hero { margin-top: 22px; border-radius: 14px; padding: 22px 22px 20px; background: var(--surface);
+  border: 1px solid var(--line); box-shadow: var(--shadow); display: grid; gap: 16px; position: relative; overflow: hidden }
+.hero::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--tone, var(--ok)) }
+.hero-head { display: flex; align-items: center; gap: 14px }
+.hero-badge { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex: none;
+  background: var(--tone-soft, var(--ok-soft)); color: var(--tone, var(--ok)) }
+.hero h1 { margin: 0; font-size: 22px; line-height: 1.3; letter-spacing: -.02em; text-wrap: balance }
+.hero p { margin: 2px 0 0; color: var(--fg-2); font-size: 14px }
+.tally { display: flex; flex-wrap: wrap; gap: 8px }
+.tally span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--fg-2);
+  padding: 4px 10px; border-radius: 8px; background: var(--sunk) }
+.tally b { color: var(--fg); font-weight: 600 }
+.issues { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none }
+.issues li { display: flex; gap: 10px; align-items: baseline; font-size: 14px; flex-wrap: wrap }
+.issues .mono { color: var(--fg-3); font-size: 12px }
+
+.stats { margin-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0 }
+.stat .k { font-size: 12px; color: var(--fg-3); letter-spacing: .02em }
+.stat .v { font-size: 22px; font-weight: 600; letter-spacing: -.02em; margin-top: 2px; white-space: nowrap }
+.stat .v small { font-size: 13px; font-weight: 500; color: var(--fg-3); margin-left: 2px }
+.stat .s { font-size: 12px; color: var(--fg-3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+
+h2 { font-size: 13px; font-weight: 600; color: var(--fg-3); letter-spacing: .06em; text-transform: uppercase;
+  margin: 34px 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px }
+h2 span { text-transform: none; letter-spacing: 0; font-weight: 500 }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--fg-3); font-weight: 500;
+  letter-spacing: 0; text-transform: none }
+.legend i { display: inline-block; width: 8px; height: 12px; border-radius: 2px; margin-right: 5px; vertical-align: -1px }
+
+.group { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+  overflow: hidden }
+.group + .group { margin-top: 12px }
+.group-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 18px;
+  background: var(--sunk); border-bottom: 1px solid var(--line); font-size: 13px; color: var(--fg-2) }
+.group-head b { color: var(--fg); font-weight: 600; font-size: 14px }
+.row { border-top: 1px solid var(--line) }
+.group-head + .row { border-top: 0 }
+.row > button { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid;
+  grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; padding: 14px 18px; align-items: center }
+.row > button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px }
+.row > button:hover { background: color-mix(in srgb, var(--sunk) 55%, transparent) }
+.who { display: flex; align-items: center; gap: 10px; min-width: 0 }
+.who .names { min-width: 0 }
+.who .label { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.who .id { font-size: 12px; color: var(--fg-3) }
+.now { display: flex; align-items: center; gap: 12px; justify-content: flex-end; white-space: nowrap }
+.now .ms { font-size: 13px; color: var(--fg-2) }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 9px 2px 7px;
+  border-radius: 999px; color: var(--tone); background: var(--tone-soft) }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tone); flex: none }
+.bars { grid-column: 1 / -1; display: grid; gap: 6px }
+.cells { display: grid; grid-template-columns: repeat(84, minmax(0, 1fr)); gap: 2px; height: 26px }
+.cells i { border-radius: 2px; background: var(--none) }
+.cells i.o { background: var(--ok) } .cells i.s { background: var(--slow) }
+.cells i.g { background: var(--part) } .cells i.d { background: var(--down) }
+.cells i:hover { filter: brightness(1.12); transform: scaleY(1.08) }
+.axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--fg-3); gap: 8px }
+.axis .mid { flex: 1; text-align: center; color: var(--fg-2) }
+.detail { padding: 0 18px 18px; display: grid; gap: 14px }
+.detail[hidden] { display: none }
+.facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px }
+.fact { background: var(--sunk); border-radius: 10px; padding: 9px 12px; min-width: 0 }
+.fact .k { font-size: 11px; color: var(--fg-3) }
+.fact .v { font-size: 15px; font-weight: 600 }
+.chart { background: var(--sunk); border-radius: 10px; padding: 10px 10px 4px; position: relative }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible }
+.chart .cap { font-size: 12px; color: var(--fg-3); margin: 0 4px 4px; display: flex; justify-content: space-between; gap: 8px }
+.chart text { fill: var(--fg-3); font-size: 10px; font-family: "IBM Plex Mono", ui-monospace, monospace }
+.detail .links { font-size: 13px; color: var(--fg-3) }
+.detail .links a { color: var(--accent); text-decoration: none }
+
+.timeline { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 6px 18px;
+  box-shadow: var(--shadow) }
+.event { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; padding: 11px 0; font-size: 14px }
+.event + .event { border-top: 1px solid var(--line) }
+.event time { color: var(--fg-3); font-size: 12px; padding-top: 2px }
+.event .what { display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+.event .arrow { color: var(--fg-3) }
+.empty { color: var(--fg-3); font-size: 14px; padding: 12px 0 }
+
+.notes { margin-top: 34px; color: var(--fg-3); font-size: 13px; display: grid; gap: 4px }
+.notes p { margin: 0; max-width: 68ch }
+.notes b { color: var(--fg-2); font-weight: 600 }
+
+.connect { margin-top: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 22px; display: grid; gap: 12px; box-shadow: var(--shadow) }
+.connect h1 { font-size: 20px; margin: 0; letter-spacing: -.02em }
+.connect p, .connect ol { margin: 0; color: var(--fg-2); font-size: 14px }
+.connect ol { padding-left: 20px; display: grid; gap: 4px }
+.connect form { display: flex; gap: 8px; flex-wrap: wrap }
+.connect input { flex: 1 1 260px; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line-strong);
+  background: var(--bg); color: var(--fg); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px }
+.connect .go { border: 0; background: var(--accent); color: #fff; padding: 10px 16px; border-radius: 10px;
+  font-weight: 600; cursor: pointer }
+:root[data-theme="dark"] .connect .go { color: #0f1218 }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .connect .go { color: #0f1218 } }
+.error { color: var(--down); font-size: 13px }
+
+.tip { position: fixed; z-index: 10; pointer-events: none; background: var(--fg); color: var(--bg); font-size: 12px;
+  padding: 6px 9px; border-radius: 8px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px));
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .18) }
+.tip .mono { opacity: .8 }
+
+[data-tone="ok"] { --tone: var(--ok); --tone-soft: var(--ok-soft) }
+[data-tone="slow"] { --tone: var(--slow); --tone-soft: var(--slow-soft) }
+[data-tone="degraded"] { --tone: var(--part); --tone-soft: var(--part-soft) }
+[data-tone="down"] { --tone: var(--down); --tone-soft: var(--down-soft) }
+
+@media (max-width: 640px) {
+  .wrap { padding-top: 18px }
+  .hero { padding: 18px 16px 16px }
+  .hero h1 { font-size: 19px }
+  .stats { grid-template-columns: 1fr 1fr }
+  .stats .stat:last-child { grid-column: 1 / -1 }
+  .row > button, .group-head { padding-left: 14px; padding-right: 14px }
+  .detail { padding: 0 14px 14px }
+  .facts { grid-template-columns: 1fr 1fr }
+  .cells { gap: 1px; height: 24px }
+  .now .ms { display: none }
+  .event { grid-template-columns: 1fr; gap: 2px }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--accent)"/><path d="M5 15h3.2l2.3-6 3.4 11 2.5-7H21" fill="none" stroke="var(--surface)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>AutoMMO <small>Status</small></span>
+    </div>
+    <div class="meta" id="meta"></div>
+  </header>
+  <main id="app"></main>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script type="application/json" id="snapshot"></script>
+<script>
+(function () {
+  var REPO = 'vnfmswlsghd/autommo-status-data', BRANCH = 'main', KEY = 'autommo-status-token';
+  var REFRESH_MS = 5 * 60 * 1000;
+  var STATE = {
+    ok: { label: '정상', icon: '<path d="M4 8.5l2.6 2.6L12 5.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
+    slow: { label: '느림', icon: '<circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 5.3V8l1.9 1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' },
+    degraded: { label: '일부 장애', icon: '<path d="M8 3.2l5.3 9.3H2.7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 7v2.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' },
+    down: { label: '장애', icon: '<path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' }
+  };
+  var CODE = { o: 'ok', s: 'slow', g: 'degraded', d: 'down' };
+  var ORDER = ['down', 'degraded', 'slow', 'ok'];
+  var GROUPS = [['autommo', '관리 시스템'], ['ec', 'EC'], ['l9', 'L9'], ['lc', 'LC'], ['sol', 'SOL'], ['vam', 'VAM']];
+  var app = document.getElementById('app'), meta = document.getElementById('meta'), tip = document.getElementById('tip');
+  var open = {}, data = null, mode = 'snapshot', timer = null;
+
+  function store(action, value) {
+    try {
+      if (action === 'get') return localStorage.getItem(KEY);
+      if (action === 'set') localStorage.setItem(KEY, value);
+      if (action === 'del') localStorage.removeItem(KEY);
+    } catch (e) { return null }
+    return null;
+  }
+  function esc(text) {
+    return String(text).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';' });
+  }
+  var KST = 9 * 3600;
+  function parts(t) {
+    var d = new Date((t + KST) * 1000);
+    return { M: d.getUTCMonth() + 1, D: d.getUTCDate(), h: d.getUTCHours(), m: d.getUTCMinutes() };
+  }
+  function two(n) { return (n < 10 ? '0' : '') + n }
+  function day(t) { var p = parts(t); return p.M + '월 ' + p.D + '일' }
+  function hour(t) { return parts(t).h }
+  function when(t) { var p = parts(t); return p.M + '월 ' + p.D + '일 ' + two(p.h) + ':' + two(p.m) }
+  function ago(t) {
+    var m = Math.max(0, Math.round((Date.now() / 1000 - t) / 60));
+    if (m < 1) return '방금';
+    if (m < 60) return m + '분 전';
+    var h = Math.floor(m / 60);
+    return h < 24 ? h + '시간 전' : Math.floor(h / 24) + '일 전';
+  }
+  function icon(state, size) {
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 16 16" aria-hidden="true">' + STATE[state].icon + '</svg>';
+  }
+  function pill(state) {
+    return '<span class="pill" data-tone="' + state + '">' + icon(state, 13) + STATE[state].label + '</span>';
+  }
+  function group(name) {
+    for (var i = 0; i < GROUPS.length; i++) if (name.indexOf(GROUPS[i][0]) === 0) return GROUPS[i];
+    return ['etc', '기타'];
+  }
+  function worst(sites) {
+    for (var i = 0; i < ORDER.length; i++) for (var j = 0; j < sites.length; j++) if (sites[j].st === ORDER[i]) return ORDER[i];
+    return 'ok';
+  }
+  function median(values) {
+    var v = values.slice().sort(function (a, b) { return a - b });
+    if (!v.length) return null;
+    var m = Math.floor(v.length / 2);
+    return v.length % 2 ? v[m] : Math.round((v[m - 1] + v[m]) / 2);
+  }
+  function name(s) { return s.l || (s.n === 'autommo' ? 'AutoMMO 관리콘솔' : s.n) }
+  function pct(value) { return value == null ? '–' : (value >= 99.95 ? '100' : value.toFixed(1)) + '%' }
+  function code(value) { return value ? String(value) : '시간 초과' }
+
+  function heroHtml(d) {
+    var counts = {}, issues = d.sites.filter(function (s) { return s.st !== 'ok' });
+    ORDER.forEach(function (k) { counts[k] = 0 });
+    d.sites.forEach(function (s) { counts[s.st] += 1 });
+    var tone = worst(d.sites), title, sub;
+    if (tone === 'ok') { title = '모든 사이트가 정상이에요'; sub = d.sites.length + '곳 모두 응답이 빠르고 안정적이에요.' }
+    else if (tone === 'slow') { title = counts.slow + '곳 응답이 느려요'; sub = '접속은 되지만 서버 처리 시간이 평소보다 길어요.' }
+    else if (tone === 'degraded') { title = (counts.degraded + counts.down) + '곳에 문제가 있어요'; sub = '앱은 응답하지만 화면(/)이 열리지 않는 사이트가 있어요.' }
+    else { title = counts.down + '곳이 응답하지 않아요'; sub = '앱 상태 확인(/healthz)이 실패했어요. 2회 연속이면 GitHub 이슈가 열려요.' }
+    var html = '<section class="hero" data-tone="' + tone + '"><div class="hero-head"><div class="hero-badge">' + icon(tone, 24) +
+      '</div><div><h1>' + title + '</h1><p>' + sub + '</p></div></div><div class="tally">';
+    ORDER.slice().reverse().forEach(function (k) {
+      html += '<span data-tone="' + k + '"><i class="dot"></i>' + STATE[k].label + ' <b class="num">' + counts[k] + '</b></span>';
+    });
+    html += '</div>';
+    if (issues.length) {
+      html += '<ul class="issues">';
+      issues.sort(function (a, b) { return ORDER.indexOf(a.st) - ORDER.indexOf(b.st) }).forEach(function (s) {
+        var why = s.st === 'down' ? '앱 응답 ' + code(s.now[0]) : s.st === 'degraded' ? '화면 응답 ' + code(s.now[3]) : '서버 처리 ' + s.now[1] + ' ms';
+        html += '<li>' + pill(s.st) + '<b>' + esc(name(s)) + '</b><span class="mono">' + esc(why) + '</span></li>';
+      });
+      html += '</ul>';
+    }
+    return html + '</section>';
+  }
+
+  function statsHtml(d) {
+    var ok = d.sites.filter(function (s) { return s.now[0] === 200 });
+    var med = median(ok.map(function (s) { return s.now[1] }));
+    var slowest = ok.slice().sort(function (a, b) { return b.now[1] - a.now[1] })[0];
+    var ups = d.sites.map(function (s) { return s.u7 }).filter(function (v) { return v != null });
+    var avg = ups.length ? ups.reduce(function (a, b) { return a + b }, 0) / ups.length : null;
+    var total = median(ok.map(function (s) { return s.now[2] }));
+    return '<section class="stats">' +
+      '<div class="stat"><div class="k">서버 처리 중앙값</div><div class="v num">' + (med == null ? '–' : med + '<small>ms</small>') +
+      '</div><div class="s">해외 측정 전체 ' + (total == null ? '–' : total + ' ms') + '</div></div>' +
+      '<div class="stat"><div class="k">가장 느린 서버 처리</div><div class="v num">' + (slowest ? slowest.now[1] + '<small>ms</small>' : '–') +
+      '</div><div class="s">' + (slowest ? esc(name(slowest)) : '–') + '</div></div>' +
+      '<div class="stat"><div class="k">7일 평균 가용률</div><div class="v num">' + pct(avg) +
+      '</div><div class="s">' + d.sites.length + '개 사이트 · 30분 간격</div></div></section>';
+  }
+
+  function cellsHtml(s, d) {
+    var html = '<div class="cells" role="img" aria-label="' + esc(name(s)) + ' 7일 상태, 2시간 칸">';
+    for (var i = 0; i < s.bars.length; i++) {
+      var c = s.bars.charAt(i);
+      html += '<i class="' + (c === '-' ? '' : c) + '" data-cell="' + i + '"></i>';
+    }
+    var first = s.bars.search(/[^-]/);
+    var span = first < 0 ? '기록 없음' : pct(s.u7) + ' 가용';
+    return html + '</div><div class="axis"><span>7일 전</span><span class="mid num">' + span + '</span><span>지금</span></div>';
+  }
+
+  function chartSvg(s, d) {
+    var W = 640, H = 150, L = 40, R = 8, T = 10, B = 22;
+    var ts = d.ts, now = d.t, start = now - 24 * 3600;
+    var vals = s.h.filter(function (v) { return v != null && v >= 0 });
+    var max = Math.max(200, Math.max.apply(null, vals.concat([0])) * 1.25);
+    var step = max <= 400 ? 100 : max <= 1000 ? 250 : max <= 2000 ? 500 : 1000;
+    max = Math.ceil(max / step) * step;
+    function x(t) { return L + (t - start) / (24 * 3600) * (W - L - R) }
+    function y(v) { return T + (1 - v / max) * (H - T - B) }
+    var out = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(name(s)) + ' 24시간 서버 처리 시간">';
+    for (var v = 0; v <= max; v += step) {
+      out += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="var(--line-strong)" stroke-width="1"' +
+        (v ? ' stroke-dasharray="2 4"' : '') + '/><text x="' + (L - 6) + '" y="' + (y(v) + 3.5) + '" text-anchor="end">' + v + '</text>';
+    }
+    if (d.slow_ms <= max) {
+      out += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(d.slow_ms) + '" y2="' + y(d.slow_ms) + '" stroke="var(--slow)" stroke-width="1" stroke-dasharray="5 4"/>' +
+        '<text x="' + (W - R) + '" y="' + (y(d.slow_ms) - 4) + '" text-anchor="end" style="fill:var(--slow)">느림 기준</text>';
+    }
+    for (var h = 0; h <= 24; h += 6) {
+      var t = start + h * 3600;
+      out += '<text x="' + x(t) + '" y="' + (H - 6) + '" text-anchor="' + (h === 0 ? 'start' : h === 24 ? 'end' : 'middle') + '">' +
+        (h === 24 ? '지금' : hour(t) + '시') + '</text>';
+    }
+    var pts = [], fails = '';
+    ts.forEach(function (t, i) {
+      var v = s.h[i];
+      if (v == null) return;
+      if (v < 0) { fails += '<circle cx="' + x(t).toFixed(1) + '" cy="' + (H - B) + '" r="4" fill="var(--down)" stroke="var(--sunk)" stroke-width="2"/>'; return }
+      pts.push([x(t), y(v)]);
+    });
+    if (pts.length > 1) {
+      var line = pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1) }).join(' ');
+      out += '<polygon points="' + pts[0][0].toFixed(1) + ',' + y(0) + ' ' + line + ' ' + pts[pts.length - 1][0].toFixed(1) + ',' + y(0) +
+        '" fill="var(--chart)" opacity=".12"/><polyline points="' + line + '" fill="none" stroke="var(--chart)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    }
+    if (pts.length) {
+      var last = pts[pts.length - 1];
+      out += '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="4" fill="var(--chart)" stroke="var(--sunk)" stroke-width="2"/>';
+    }
+    out += fails + '<rect x="' + L + '" y="0" width="' + (W - L - R) + '" height="' + H + '" fill="transparent" data-chart="' + esc(s.n) + '"/>';
+    return out + '</svg>';
+  }
+
+  function detailHtml(s, d) {
+    var app = s.now[0] === 200 ? s.now[2] + ' ms' : '실패 ' + code(s.now[0]);
+    var screen = s.now[3] >= 200 && s.now[3] < 400 ? s.now[4] + ' ms' : '실패 ' + code(s.now[3]);
+    var points = s.h.filter(function (v) { return v != null }).length;
+    return '<div class="facts">' +
+      '<div class="fact"><div class="k">서버 처리 p95 · 24시간</div><div class="v num">' + (s.p95 == null ? '–' : s.p95 + ' ms') + '</div></div>' +
+      '<div class="fact"><div class="k">앱 전체(해외)</div><div class="v num">' + app + '</div></div>' +
+      '<div class="fact"><div class="k">화면 전체(/)</div><div class="v num">' + screen + '</div></div>' +
+      '<div class="fact"><div class="k">가용률 24시간 · 7일</div><div class="v num">' + pct(s.u24) + ' · ' + pct(s.u7) + '</div></div></div>' +
+      '<div class="chart"><div class="cap"><span>서버 처리 시간 · 최근 24시간 (ms)</span><span class="num">측정 ' + points + '회</span></div>' +
+      chartSvg(s, d) + '</div>' +
+      '<div class="links"><a href="https://' + esc(s.d) + '" target="_blank" rel="noopener">' + esc(s.d) + ' ↗</a> · 앱 확인 ' +
+      (s.n === 'autommo' ? '/api/auth/status' : '/healthz') + '</div>';
+  }
+
+  function rowHtml(s, d) {
+    var id = 'd-' + s.n, isOpen = !!open[s.n];
+    var ms = s.now[0] === 200 ? s.now[1] + ' ms' : '–';
+    return '<div class="row" data-tone="' + s.st + '"><button type="button" aria-expanded="' + isOpen + '" aria-controls="' + id + '" data-site="' + esc(s.n) + '">' +
+      '<div class="who"><i class="dot"></i><div class="names"><div class="label">' + esc(name(s)) + '</div><div class="id mono">' + esc(s.n) + '</div></div></div>' +
+      '<div class="now"><span class="ms num">' + ms + '</span>' + pill(s.st) + '</div>' +
+      '<div class="bars">' + cellsHtml(s, d) + '</div></button>' +
+      '<div class="detail" id="' + id + '"' + (isOpen ? '' : ' hidden') + '>' + (isOpen ? detailHtml(s, d) : '') + '</div></div>';
+  }
+
+  function groupsHtml(d) {
+    var buckets = {}, order = [];
+    d.sites.forEach(function (s) {
+      var g = group(s.n);
+      if (!buckets[g[0]]) { buckets[g[0]] = { label: g[1], sites: [] }; order.push(g[0]) }
+      buckets[g[0]].sites.push(s);
+    });
+    var rank = GROUPS.map(function (g) { return g[0] }).concat(['etc']);
+    order.sort(function (a, b) { return rank.indexOf(a) - rank.indexOf(b) });
+    var html = '<h2>사이트 <span class="legend">' + ['ok', 'slow', 'degraded', 'down'].map(function (k) {
+      return '<span><i style="background:var(--' + (k === 'degraded' ? 'part' : k) + ')"></i>' + STATE[k].label + '</span>';
+    }).join('') + '<span><i style="background:var(--none)"></i>기록 없음</span></span></h2>';
+    order.forEach(function (key) {
+      var b = buckets[key], tone = worst(b.sites);
+      b.sites.sort(function (x, y) { return x.n < y.n ? -1 : 1 });
+      html += '<section class="group"><div class="group-head" data-tone="' + tone + '"><span><b>' + esc(b.label) + '</b> · ' + b.sites.length +
+        '곳</span>' + pill(tone) + '</div>' + b.sites.map(function (s) { return rowHtml(s, d) }).join('') + '</section>';
+    });
+    return html;
+  }
+
+  function timelineHtml(d) {
+    var names = {};
+    d.sites.forEach(function (s) { names[s.n] = name(s) });
+    var html = '<h2>최근 상태 변화 <span>최근 7일</span></h2><section class="timeline">';
+    if (!d.changes.length) return html + '<div class="empty">최근 7일 동안 상태 변화가 없어요.</div></section>';
+    d.changes.forEach(function (c) {
+      html += '<div class="event"><time class="num">' + when(c[0]) + '</time><div class="what"><b>' + esc(names[c[1]] || c[1]) + '</b>' +
+        pill(c[2]) + '<span class="arrow">→</span>' + pill(c[3]) + '</div></div>';
+    });
+    return html + '</section>';
+  }
+
+  function notesHtml() {
+    return '<section class="notes">' +
+      '<p><b>측정 위치</b> GitHub 서버(가비아 밖)에서 30분마다 사이트별로 앱(/healthz)과 화면(/)을 한 번씩 요청해요.</p>' +
+      '<p><b>서버 처리</b> 요청을 다 보낸 뒤 첫 바이트까지 걸린 시간이에요. 과부하는 이 값으로 판단해요.</p>' +
+      '<p><b>느림</b> 서버 처리가 800 ms와 그 사이트 7일 중앙값의 4배 중 큰 값을 넘을 때예요.</p>' +
+      '<p><b>가용률</b> 장애가 아닌 측정의 비율이에요. 막대 한 칸은 2시간이고 그 사이 가장 나쁜 상태를 보여 줘요.</p>' +
+      '<p>서버 CPU·메모리 같은 내부 지표는 AutoMMO 관리콘솔에서 봐요.</p></section>';
+  }
+
+  function renderMeta() {
+    meta.innerHTML = '<span class="chip ' + (mode === 'live' ? 'live">실시간' : 'snap">스냅샷') + '</span>' +
+      '<span>마지막 확인 <span class="num">' + when(data.t) + '</span> · ' + ago(data.t) + '</span>' +
+      (mode === 'live' ? '<button class="icon-btn" type="button" id="forget">토큰 지우기</button>' : '');
+    var forget = document.getElementById('forget');
+    if (forget) forget.onclick = function () { store('del'); data = null; clearInterval(timer); connect('') };
+  }
+
+  function render() {
+    renderMeta();
+    app.innerHTML = heroHtml(data) + statsHtml(data) + groupsHtml(data) + timelineHtml(data) + notesHtml();
+  }
+
+  function findSite(name) {
+    for (var i = 0; i < data.sites.length; i++) if (data.sites[i].n === name) return data.sites[i];
+    return null;
+  }
+
+  app.addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-site]');
+    if (!btn) return;
+    var name = btn.getAttribute('data-site'), s = findSite(name), panel = btn.nextElementSibling;
+    open[name] = !open[name];
+    btn.setAttribute('aria-expanded', open[name]);
+    panel.innerHTML = open[name] ? detailHtml(s, data) : '';
+    panel.hidden = !open[name];
+  });
+
+  function showTip(x, y, html) { tip.innerHTML = html; tip.style.left = x + 'px'; tip.style.top = y + 'px'; tip.hidden = false }
+  function hideTip() { tip.hidden = true }
+  function onPoint(e) {
+    var target = e.target;
+    if (!data || !target.closest) return hideTip();
+    var cell = target.closest('[data-cell]');
+    if (cell) {
+      var s = findSite(cell.closest('.row').querySelector('button').getAttribute('data-site'));
+      var i = +cell.getAttribute('data-cell'), from = data.t - 7 * 24 * 3600 + i * data.bucket;
+      var c = s.bars.charAt(i), r = cell.getBoundingClientRect();
+      return showTip(r.left + r.width / 2, r.top, '<b>' + day(from) + ' ' + hour(from) + '–' + hour(from + data.bucket) +
+        '시</b> · ' + (c === '-' ? '기록 없음' : STATE[CODE[c]].label));
+    }
+    var area = target.closest('[data-chart]');
+    if (area) {
+      var site = findSite(area.getAttribute('data-chart')), svg = area.ownerSVGElement, box = svg.getBoundingClientRect();
+      var scale = 640 / box.width, px = (e.clientX - box.left) * scale, start = data.t - 24 * 3600;
+      var best = -1, dist = 1e9;
+      data.ts.forEach(function (t, k) {
+        if (site.h[k] == null) return;
+        var dx = Math.abs(40 + (t - start) / (24 * 3600) * 592 - px);
+        if (dx < dist) { dist = dx; best = k }
+      });
+      if (best < 0) return hideTip();
+      var v = site.h[best];
+      var cx = box.left + (40 + (data.ts[best] - start) / (24 * 3600) * 592) / scale;
+      return showTip(cx, box.top + 8, '<b>' + when(data.ts[best]) + '</b> · <span class="mono">' + (v < 0 ? '실패' : v + ' ms') + '</span>');
+    }
+    hideTip();
+  }
+  document.addEventListener('pointermove', onPoint);
+  document.addEventListener('pointerdown', onPoint);
+  window.addEventListener('scroll', hideTip, { passive: true });
+
+  function connect(message) {
+    mode = 'live';
+    meta.innerHTML = '<span class="chip snap">연결 필요</span>';
+    app.innerHTML = '<section class="connect"><h1>상태판 열기</h1>' +
+      '<p>측정 요약은 상태 전용 비공개 저장소에 있어서, 이 브라우저에 그 저장소 전용 토큰을 한 번 넣어야 보여요. 토큰은 이 기기에만 저장되고 GitHub API로만 보내요.</p>' +
+      '<ol><li>GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token</li>' +
+      '<li>Repository access: Only select repositories → <span class="mono">' + REPO + '</span> 하나만</li>' +
+      '<li>Permissions: Contents만 주고 다른 권한은 주지 않아요</li></ol>' +
+      '<form id="tokenForm"><input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" aria-label="GitHub 토큰">' +
+      '<button class="go" type="submit">열기</button></form>' + (message ? '<div class="error">' + esc(message) + '</div>' : '') + '</section>';
+    document.getElementById('tokenForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var value = document.getElementById('token').value.trim();
+      if (!value) return;
+      store('set', value);
+      load(value);
+    });
+  }
+
+  function load(token) {
+    var url = 'https://api.github.com/repos/' + REPO + '/contents/status.json?ref=' + BRANCH;
+    fetch(url, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' })
+      .then(function (res) {
+        if (res.status === 401) throw new Error('토큰이 만료됐거나 잘못됐어요. 새 토큰을 넣어 주세요.');
+        if (res.status === 403 || res.status === 404) throw new Error('토큰이 이 저장소의 Contents를 읽을 수 없어요. 권한을 확인해 주세요.');
+        if (!res.ok) throw new Error('GitHub 응답이 ' + res.status + '이에요. 잠시 뒤 다시 열어 주세요.');
+        return res.json();
+      })
+      .then(function (json) {
+        data = json; mode = 'live'; render();
+        clearInterval(timer);
+        timer = setInterval(function () { if (!document.hidden) load(token) }, REFRESH_MS);
+      })
+      .catch(function (err) {
+        if (data) return;
+        if (/토큰/.test(err.message)) store('del');
+        connect(err.message || '상태를 불러오지 못했어요.');
+      });
+  }
+
+  var embedded = document.getElementById('snapshot').textContent.trim();
+  if (embedded) {
+    try { data = JSON.parse(embedded); mode = 'snapshot'; render() } catch (e) { connect('스냅샷을 읽지 못했어요.') }
+  } else {
+    var saved = store('get');
+    if (saved) load(saved); else connect('');
+  }
+  setInterval(function () { if (data) renderMeta() }, 60 * 1000);
+})();
+</script>
+
+</body>
+</html>
