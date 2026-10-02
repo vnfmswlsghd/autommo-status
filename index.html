@@ -55,6 +55,8 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 .icon-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 4px 10px;
   font-size: 12px; cursor: pointer; color: var(--fg-2) }
 .icon-btn:hover { border-color: var(--line-strong); color: var(--fg) }
+.icon-btn[disabled] { opacity: .6; cursor: default }
+.meta .error { font-size: 12px }
 
 .hero { margin-top: 22px; border-radius: 14px; padding: 22px 22px 20px; background: var(--surface);
   border: 1px solid var(--line); box-shadow: var(--shadow); display: grid; gap: 16px; position: relative; overflow: hidden }
@@ -148,7 +150,7 @@ h2 span { text-transform: none; letter-spacing: 0; font-weight: 500 }
 .connect ol { padding-left: 20px; display: grid; gap: 4px }
 .connect form { display: flex; gap: 8px; flex-wrap: wrap }
 .connect input { flex: 1 1 260px; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line-strong);
-  background: var(--bg); color: var(--fg); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 13px }
+  background: var(--bg); color: var(--fg); font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 16px }
 .connect .go { border: 0; background: var(--accent); color: #fff; padding: 10px 16px; border-radius: 10px;
   font-weight: 600; cursor: pointer }
 :root[data-theme="dark"] .connect .go { color: #0f1218 }
@@ -195,8 +197,8 @@ h2 span { text-transform: none; letter-spacing: 0; font-weight: 500 }
 <script type="application/json" id="snapshot"></script>
 <script>
 (function () {
-  var REPO = 'vnfmswlsghd/autommo-status-data', BRANCH = 'main', KEY = 'autommo-status-token';
-  var REFRESH_MS = 5 * 60 * 1000;
+  var REPO = 'vnfmswlsghd/autommo-status-data', BRANCH = 'data', KEY = 'autommo-status-token';
+  var REFRESH_MS = 5 * 60 * 1000, PROBE = 'probe.yml', PROBE_WAIT_MS = 4 * 60 * 1000;
   var STATE = {
     ok: { label: '정상', icon: '<path d="M4 8.5l2.6 2.6L12 5.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
     slow: { label: '느림', icon: '<circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 5.3V8l1.9 1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' },
@@ -207,7 +209,7 @@ h2 span { text-transform: none; letter-spacing: 0; font-weight: 500 }
   var ORDER = ['down', 'degraded', 'slow', 'ok'];
   var GROUPS = [['autommo', '관리 시스템'], ['ec', 'EC'], ['l9', 'L9'], ['lc', 'LC'], ['sol', 'SOL'], ['vam', 'VAM']];
   var app = document.getElementById('app'), meta = document.getElementById('meta'), tip = document.getElementById('tip');
-  var open = {}, data = null, mode = 'snapshot', timer = null;
+  var open = {}, data = null, mode = 'snapshot', timer = null, token = '', probing = null;
 
   function store(action, value) {
     try {
@@ -256,6 +258,8 @@ h2 span { text-transform: none; letter-spacing: 0; font-weight: 500 }
     var m = Math.floor(v.length / 2);
     return v.length % 2 ? v[m] : Math.round((v[m - 1] + v[m]) / 2);
   }
+  function every(d) { var m = d.every || 180; return m % 60 ? m + '분' : (m / 60) + '시간' }
+  function bucket(d) { var h = (d.bucket || 10800) / 3600; return h + '시간' }
   function name(s) { return s.l || (s.n === 'autommo' ? 'AutoMMO 관리콘솔' : s.n) }
   function pct(value) { return value == null ? '–' : (value >= 99.95 ? '100' : value.toFixed(1)) + '%' }
   function code(value) { return value ? String(value) : '시간 초과' }
@@ -299,11 +303,11 @@ h2 span { text-transform: none; letter-spacing: 0; font-weight: 500 }
       '<div class="stat"><div class="k">가장 느린 서버 처리</div><div class="v num">' + (slowest ? slowest.now[1] + '<small>ms</small>' : '–') +
       '</div><div class="s">' + (slowest ? esc(name(slowest)) : '–') + '</div></div>' +
       '<div class="stat"><div class="k">7일 평균 가용률</div><div class="v num">' + pct(avg) +
-      '</div><div class="s">' + d.sites.length + '개 사이트 · 30분 간격</div></div></section>';
+      '</div><div class="s">' + d.sites.length + '개 사이트 · ' + every(d) + ' 간격</div></div></section>';
   }
 
   function cellsHtml(s, d) {
-    var html = '<div class="cells" role="img" aria-label="' + esc(name(s)) + ' 7일 상태, 2시간 칸">';
+    var html = '<div class="cells" role="img" aria-label="' + esc(name(s)) + ' 7일 상태, ' + bucket(d) + ' 칸">';
     for (var i = 0; i < s.bars.length; i++) {
       var c = s.bars.charAt(i);
       html += '<i class="' + (c === '-' ? '' : c) + '" data-cell="' + i + '"></i>';
@@ -414,26 +418,65 @@ h2 span { text-transform: none; letter-spacing: 0; font-weight: 500 }
     return html + '</section>';
   }
 
-  function notesHtml() {
+  function notesHtml(d) {
     return '<section class="notes">' +
-      '<p><b>측정 위치</b> GitHub 서버(가비아 밖)에서 30분마다 사이트별로 앱(/healthz)과 화면(/)을 한 번씩 요청해요.</p>' +
+      '<p><b>측정 위치</b> GitHub 서버(가비아 밖)에서 ' + every(d) + '마다 사이트별로 앱(/healthz)과 화면(/)을 한 번씩 요청해요. ' +
+      '위의 새로고침을 누르면 그 자리에서 한 번 더 재요(1분 안팎).</p>' +
       '<p><b>서버 처리</b> 요청을 다 보낸 뒤 첫 바이트까지 걸린 시간이에요. 과부하는 이 값으로 판단해요.</p>' +
       '<p><b>느림</b> 서버 처리가 800 ms와 그 사이트 7일 중앙값의 4배 중 큰 값을 넘을 때예요.</p>' +
-      '<p><b>가용률</b> 장애가 아닌 측정의 비율이에요. 막대 한 칸은 2시간이고 그 사이 가장 나쁜 상태를 보여 줘요.</p>' +
+      '<p><b>가용률</b> 장애가 아닌 측정의 비율이에요. 막대 한 칸은 ' + bucket(d) + '이고 그 사이 가장 나쁜 상태를 보여 줘요.</p>' +
       '<p>서버 CPU·메모리 같은 내부 지표는 AutoMMO 관리콘솔에서 봐요.</p></section>';
   }
 
   function renderMeta() {
     meta.innerHTML = '<span class="chip ' + (mode === 'live' ? 'live">실시간' : 'snap">스냅샷') + '</span>' +
       '<span>마지막 확인 <span class="num">' + when(data.t) + '</span> · ' + ago(data.t) + '</span>' +
-      (mode === 'live' ? '<button class="icon-btn" type="button" id="forget">토큰 지우기</button>' : '');
+      (mode === 'live' ? '<button class="icon-btn" type="button" id="probe"' + (probing ? ' disabled' : '') + '>' +
+        (probing ? '측정 중…' : '새로고침') + '</button>' +
+        '<button class="icon-btn" type="button" id="forget">토큰 지우기</button>' : '') +
+      (probing && probing.note ? '<span class="error">' + esc(probing.note) + '</span>' : '');
     var forget = document.getElementById('forget');
-    if (forget) forget.onclick = function () { store('del'); data = null; clearInterval(timer); connect('') };
+    if (forget) forget.onclick = function () { store('del'); data = null; token = ''; clearInterval(timer); connect('') };
+    var again = document.getElementById('probe');
+    if (again) again.onclick = refresh;
+  }
+
+  // 새로고침: 상태 전용 저장소의 probe.yml을 한 번 실행하고, 새 측정이 올라올 때까지 기다려요.
+  function refresh() {
+    if (probing || !token || !data) return;
+    var before = data.t;
+    probing = { started: Date.now() }; renderMeta();
+    fetch('https://api.github.com/repos/' + REPO + '/actions/workflows/' + PROBE + '/dispatches', {
+      method: 'POST', cache: 'no-store',
+      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref: 'main' })
+    }).then(function (res) {
+      if (res.status === 403 || res.status === 404) throw new Error('토큰에 Actions 읽기·쓰기 권한이 있어야 새로고침할 수 있어요.');
+      if (res.status !== 204) throw new Error('새로고침 요청이 실패했어요(GitHub ' + res.status + ').');
+      wait(before);
+    }).catch(function (err) {
+      probing = { note: err.message }; renderMeta();
+      setTimeout(function () { probing = null; renderMeta() }, 8000);
+    });
+  }
+
+  function wait(before) {
+    if (!probing) return;
+    if (Date.now() - probing.started > PROBE_WAIT_MS) {
+      probing = { note: '새 측정이 아직 안 올라왔어요. 잠시 뒤 다시 확인해 주세요.' }; renderMeta();
+      setTimeout(function () { probing = null; renderMeta() }, 8000);
+      return;
+    }
+    setTimeout(function () {
+      fetchStatus(token).then(function (json) {
+        if (json.t > before) { data = json; probing = null; render() } else wait(before);
+      }).catch(function () { wait(before) });
+    }, 10000);
   }
 
   function render() {
     renderMeta();
-    app.innerHTML = heroHtml(data) + statsHtml(data) + groupsHtml(data) + timelineHtml(data) + notesHtml();
+    app.innerHTML = heroHtml(data) + statsHtml(data) + groupsHtml(data) + timelineHtml(data) + notesHtml(data);
   }
 
   function findSite(name) {
@@ -492,7 +535,7 @@ h2 span { text-transform: none; letter-spacing: 0; font-weight: 500 }
       '<p>측정 요약은 상태 전용 비공개 저장소에 있어서, 이 브라우저에 그 저장소 전용 토큰을 한 번 넣어야 보여요. 토큰은 이 기기에만 저장되고 GitHub API로만 보내요.</p>' +
       '<ol><li>GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token</li>' +
       '<li>Repository access: Only select repositories → <span class="mono">' + REPO + '</span> 하나만</li>' +
-      '<li>Permissions: Contents만 주고 다른 권한은 주지 않아요</li></ol>' +
+      '<li>Permissions: Contents는 Read-only, Actions는 Read and write(새로고침 버튼용)만 주고 다른 권한은 주지 않아요</li></ol>' +
       '<form id="tokenForm"><input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" aria-label="GitHub 토큰">' +
       '<button class="go" type="submit">열기</button></form>' + (message ? '<div class="error">' + esc(message) + '</div>' : '') + '</section>';
     document.getElementById('tokenForm').addEventListener('submit', function (e) {
@@ -504,19 +547,23 @@ h2 span { text-transform: none; letter-spacing: 0; font-weight: 500 }
     });
   }
 
-  function load(token) {
+  function fetchStatus(value) {
     var url = 'https://api.github.com/repos/' + REPO + '/contents/status.json?ref=' + BRANCH;
-    fetch(url, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' })
+    return fetch(url, { headers: { Authorization: 'Bearer ' + value, Accept: 'application/vnd.github.raw+json' }, cache: 'no-store' })
       .then(function (res) {
         if (res.status === 401) throw new Error('토큰이 만료됐거나 잘못됐어요. 새 토큰을 넣어 주세요.');
         if (res.status === 403 || res.status === 404) throw new Error('토큰이 이 저장소의 Contents를 읽을 수 없어요. 권한을 확인해 주세요.');
         if (!res.ok) throw new Error('GitHub 응답이 ' + res.status + '이에요. 잠시 뒤 다시 열어 주세요.');
         return res.json();
-      })
+      });
+  }
+
+  function load(value) {
+    fetchStatus(value)
       .then(function (json) {
-        data = json; mode = 'live'; render();
+        token = value; data = json; mode = 'live'; if (!probing) render();
         clearInterval(timer);
-        timer = setInterval(function () { if (!document.hidden) load(token) }, REFRESH_MS);
+        timer = setInterval(function () { if (!document.hidden && !probing) load(value) }, REFRESH_MS);
       })
       .catch(function (err) {
         if (data) return;
