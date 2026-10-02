@@ -199,6 +199,8 @@ h2 span { text-transform: none; letter-spacing: 0; font-weight: 500 }
 (function () {
   var REPO = 'vnfmswlsghd/autommo-status-data', BRANCH = 'data', KEY = 'autommo-status-token';
   var REFRESH_MS = 5 * 60 * 1000, PROBE = 'probe.yml', PROBE_WAIT_MS = 4 * 60 * 1000;
+  // 정기 측정(3시간)이 GitHub 쪽에서 빠지면, 이 페이지를 연 브라우저가 대신 한 번 재게 해요(30분에 한 번까지).
+  var STALE_S = 200 * 60, AUTO_KEY = 'autommo-status-auto', AUTO_GAP_MS = 30 * 60 * 1000;
   var STATE = {
     ok: { label: '정상', icon: '<path d="M4 8.5l2.6 2.6L12 5.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' },
     slow: { label: '느림', icon: '<circle cx="8" cy="8" r="5.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 5.3V8l1.9 1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' },
@@ -432,20 +434,21 @@ h2 span { text-transform: none; letter-spacing: 0; font-weight: 500 }
     meta.innerHTML = '<span class="chip ' + (mode === 'live' ? 'live">실시간' : 'snap">스냅샷') + '</span>' +
       '<span>마지막 확인 <span class="num">' + when(data.t) + '</span> · ' + ago(data.t) + '</span>' +
       (mode === 'live' ? '<button class="icon-btn" type="button" id="probe"' + (probing ? ' disabled' : '') + '>' +
-        (probing ? '측정 중…' : '새로고침') + '</button>' +
+        (probing ? (probing.auto ? '오래돼서 다시 재는 중…' : '측정 중…') : '새로고침') + '</button>' +
         '<button class="icon-btn" type="button" id="forget">토큰 지우기</button>' : '') +
-      (probing && probing.note ? '<span class="error">' + esc(probing.note) + '</span>' : '');
+      (probing && probing.note ? '<span class="error">' + esc(probing.note) + '</span>' : '') +
+      (!probing && mode === 'live' && Date.now() / 1000 - data.t > STALE_S ? '<span class="error">정기 측정이 늦어지고 있어요. 새로고침으로 바로 잴 수 있어요.</span>' : '');
     var forget = document.getElementById('forget');
     if (forget) forget.onclick = function () { store('del'); data = null; token = ''; clearInterval(timer); connect('') };
     var again = document.getElementById('probe');
-    if (again) again.onclick = refresh;
+    if (again) again.onclick = function () { refresh(false) };
   }
 
   // 새로고침: 상태 전용 저장소의 probe.yml을 한 번 실행하고, 새 측정이 올라올 때까지 기다려요.
-  function refresh() {
+  function refresh(auto) {
     if (probing || !token || !data) return;
     var before = data.t;
-    probing = { started: Date.now() }; renderMeta();
+    probing = { started: Date.now(), auto: auto === true }; renderMeta();
     fetch('https://api.github.com/repos/' + REPO + '/actions/workflows/' + PROBE + '/dispatches', {
       method: 'POST', cache: 'no-store',
       headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
@@ -558,10 +561,20 @@ h2 span { text-transform: none; letter-spacing: 0; font-weight: 500 }
       });
   }
 
+  function autoRefresh() {
+    if (probing || !data || Date.now() / 1000 - data.t < STALE_S) return;
+    var last = 0;
+    try { last = +localStorage.getItem(AUTO_KEY) || 0 } catch (e) { return }
+    if (Date.now() - last < AUTO_GAP_MS) return;
+    try { localStorage.setItem(AUTO_KEY, String(Date.now())) } catch (e) { return }
+    refresh(true);
+  }
+
   function load(value) {
     fetchStatus(value)
       .then(function (json) {
         token = value; data = json; mode = 'live'; if (!probing) render();
+        autoRefresh();
         clearInterval(timer);
         timer = setInterval(function () { if (!document.hidden && !probing) load(value) }, REFRESH_MS);
       })
